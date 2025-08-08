@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteio de Times</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚽ Sorteio de Times</h1>
+            <p>Crie times balanceados considerando habilidade e posição dos jogadores</p>
+        </header>
+
+        <main>
+            <!-- Configuração dos Times -->
+            <section class="config-section">
+                <h2>Configuração dos Times</h2>
+                <div class="config-grid">
+                    <div class="input-group">
+                        <label for="numTeams">Quantidade de Times:</label>
+                        <input type="number" id="numTeams" min="2" max="10" value="2">
+                    </div>
+                    <div class="input-group">
+                        <label for="playersPerTeam">Jogadores por Time:</label>
+                        <input type="number" id="playersPerTeam" min="3" max="11" value="5">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Adicionar Jogadores -->
+            <section class="players-section">
+                <h2>Adicionar Jogadores</h2>
+                <div class="player-form">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="playerName">Nome do Jogador:</label>
+                            <input type="text" id="playerName" placeholder="Digite o nome">
+                        </div>
+                        <div class="input-group">
+                            <label for="playerSkill">Habilidade:</label>
+                            <select id="playerSkill">
+                                <option value="1">⭐ 1 Estrela</option>
+                                <option value="2" selected>⭐⭐ 2 Estrelas</option>
+                                <option value="3">⭐⭐⭐ 3 Estrelas</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="playerPosition">Posição:</label>
+                            <select id="playerPosition">
+                                <option value="pivo">Pivô</option>
+                                <option value="fixo">Fixo</option>
+                                <option value="meio" selected>Meio</option>
+                                <option value="ala">Ala</option>
+                            </select>
+                        </div>
+                        <button type="button" id="addPlayer" class="btn-primary">Adicionar Jogador</button>
+                    </div>
+                </div>
+
+                <!-- Lista de Jogadores -->
+                <div class="players-list">
+                    <h3>Jogadores Cadastrados (<span id="playerCount">0</span>)</h3>
+                    <div id="playersList" class="players-grid"></div>
+                </div>
+            </section>
+
+            <!-- Controles de Sorteio -->
+            <section class="draw-section">
+                <div class="draw-controls">
+                    <button type="button" id="drawTeams" class="btn-success" disabled>🎲 Sortear Times</button>
+                    <button type="button" id="clearAll" class="btn-danger">🗑️ Limpar Tudo</button>
+                </div>
+            </section>
+
+            <!-- Resultado dos Times -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Times Sorteados</h2>
+                <div id="teamsResult" class="teams-grid"></div>
+                <div class="balance-info">
+                    <h3>Informações de Balanceamento</h3>
+                    <div id="balanceInfo"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
