@@ -115,7 +115,8 @@ class TeamDrawApp {
                 'pivo': 'Pivô',
                 'fixo': 'Fixo',
                 'meio': 'Meio',
-                'ala': 'Ala'
+                'ala-esquerda': 'ala-esquerda',
+                'ala-direita': 'ala-direita'
             };
 
             playerCard.innerHTML = `
@@ -163,7 +164,7 @@ class TeamDrawApp {
             name: `Time ${i + 1}`,
             players: [],
             totalSkill: 0,
-            positions: { pivo: 0, fixo: 0, meio: 0, ala: 0 }
+            positions: { pivo: 0, fixo: 0, meio: 0, ala_esquerda: 0 ,ala_direita: 0 }
         }));
 
         // Algoritmo de balanceamento
@@ -180,7 +181,8 @@ class TeamDrawApp {
             pivo: availablePlayers.filter(p => p.position === 'pivo'),
             fixo: availablePlayers.filter(p => p.position === 'fixo'),
             meio: availablePlayers.filter(p => p.position === 'meio'),
-            ala: availablePlayers.filter(p => p.position === 'ala')
+            'ala-esquerda': availablePlayers.filter(p => p.position === 'ala-esquerda'),
+            'ala-direita': availablePlayers.filter(p => p.position === 'ala-direita')
         };
 
         // Ordenar cada posição por habilidade (decrescente)
@@ -189,7 +191,7 @@ class TeamDrawApp {
         });
 
         // Distribuir jogadores por posição de forma balanceada
-        const positions = ['pivo', 'fixo', 'meio', 'ala'];
+        const positions = ['pivo', 'fixo', 'meio', 'ala-esquerda', 'ala-direita'];
         
         for (let round = 0; round < playersPerTeam; round++) {
             for (const position of positions) {
@@ -268,7 +270,8 @@ class TeamDrawApp {
                 'pivo': 'Pivô',
                 'fixo': 'Fixo',
                 'meio': 'Meio',
-                'ala': 'Ala'
+                'ala-esquerda': 'Ala Esquerda',
+                'ala-direita': 'Ala Direita'
             };
 
             teamCard.innerHTML = `
@@ -307,7 +310,7 @@ class TeamDrawApp {
         
         // Calcular distribuição de posições
         const positionDistribution = {};
-        const positions = ['pivo', 'fixo', 'meio', 'ala'];
+        const positions = ['pivo', 'fixo', 'meio', 'ala_esquerda', 'ala_direita'];
         
         positions.forEach(position => {
             const counts = this.teams.map(team => team.positions[position]);
