@@ -56,7 +56,6 @@ class TeamDrawApp {
             playerPosition: document.getElementById('playerPosition'),
             addPlayerBtn: document.getElementById('addPlayer'),
             drawTeamsBtn: document.getElementById('drawTeams'),
-            drawTeamsArrivedBtn: document.getElementById('drawTeamsArrived'),
             clearAllBtn: document.getElementById('clearAll'),
             numTeams: document.getElementById('numTeams'),
             playersPerTeam: document.getElementById('playersPerTeam'),
@@ -79,7 +78,6 @@ class TeamDrawApp {
         // Event listeners
         this.elements.addPlayerBtn.addEventListener('click', () => this.addPlayer());
         this.elements.drawTeamsBtn.addEventListener('click', () => this.drawTeams());
-        this.elements.drawTeamsArrivedBtn.addEventListener('click', () => this.drawTeamsArrived());
         this.elements.clearAllBtn.addEventListener('click', () => this.clearAll());
         this.elements.arrivalBtn.addEventListener('click', () => this.registerArrival());
         this.elements.clearArrivalsBtn.addEventListener('click', () => this.clearArrivals());
@@ -344,20 +342,6 @@ class TeamDrawApp {
         } else {
             this.elements.drawTeamsBtn.textContent = '🎲 Sortear Times';
         }
-
-        // Verificar se pode sortear apenas quem chegou
-        const arrivedNames = this.arrivals.map(arrival => arrival.name);
-        const arrivedPlayers = this.players.filter(player => 
-            arrivedNames.includes(player.name)
-        );
-        const canDrawArrived = arrivedPlayers.length >= requiredPlayers && this.arrivals.length > 0;
-        this.elements.drawTeamsArrivedBtn.disabled = !canDrawArrived;
-        
-        if (!canDrawArrived && arrivedPlayers.length > 0) {
-            this.elements.drawTeamsArrivedBtn.textContent = `🎲 Sortear (Quem Chegou) (${arrivedPlayers.length}/${requiredPlayers})`;
-        } else {
-            this.elements.drawTeamsArrivedBtn.textContent = '🎲 Sortear (Quem Chegou)';
-        }
     }
 
     drawTeams() {
@@ -366,51 +350,6 @@ class TeamDrawApp {
         
         // Criar cópia dos jogadores para não modificar o array original
         const availablePlayers = [...this.players];
-        
-        // Inicializar times vazios
-        this.teams = Array.from({ length: numTeams }, (_, i) => ({
-            id: i + 1,
-            name: `Time ${i + 1}`,
-            players: [],
-            totalSkill: 0,
-            positions: { pivo: 0, fixo: 0, meio: 0, ala_esquerda: 0 ,ala_direita: 0 }
-        }));
-
-        // Algoritmo de balanceamento
-        this.balanceTeams(availablePlayers, playersPerTeam);
-        
-        // Exibir resultados
-        this.displayResults();
-        this.saveDataToLocalStorage();  // Salvar os dados no localStorage
-    }
-
-    drawTeamsArrived() {
-        if (this.arrivals.length === 0) {
-            alert('Nenhuma pessoa chegou ainda!');
-            return;
-        }
-
-        const numTeams = parseInt(this.elements.numTeams.value);
-        const playersPerTeam = parseInt(this.elements.playersPerTeam.value);
-        
-        // Pegar nomes de quem chegou
-        const arrivedNames = this.arrivals.map(arrival => arrival.name);
-        
-        // Filtrar jogadores que chegaram
-        const availablePlayers = this.players.filter(player => 
-            arrivedNames.includes(player.name)
-        );
-
-        if (availablePlayers.length === 0) {
-            alert('Nenhum jogador cadastrado chegou ainda!');
-            return;
-        }
-
-        const requiredPlayers = numTeams * playersPerTeam;
-        if (availablePlayers.length < requiredPlayers) {
-            alert(`Você tem ${availablePlayers.length} jogadores que chegaram, mas precisa de ${requiredPlayers} para sortear ${numTeams} times com ${playersPerTeam} jogadores cada.`);
-            return;
-        }
         
         // Inicializar times vazios
         this.teams = Array.from({ length: numTeams }, (_, i) => ({
@@ -492,6 +431,98 @@ class TeamDrawApp {
                 teamWithFewestPlayers.totalSkill += player.skill;
                 teamWithFewestPlayers.positions[player.position]++;
             }
+        }
+
+        // Regra especial: Yan e Jhon Luxuria nao podem ficar no mesmo time.
+        this.enforceSeparatedPlayersRule('Yan', 'Jhon Luxuria');
+    }
+
+    enforceSeparatedPlayersRule(nameA, nameB) {
+        const normalize = (name) => name.trim().toLowerCase();
+        const normalizedA = normalize(nameA);
+        const normalizedB = normalize(nameB);
+
+        const teamWithA = this.teams.find(team =>
+            team.players.some(player => normalize(player.name) === normalizedA)
+        );
+        const teamWithB = this.teams.find(team =>
+            team.players.some(player => normalize(player.name) === normalizedB)
+        );
+
+        if (!teamWithA || !teamWithB || teamWithA.id !== teamWithB.id) {
+            return;
+        }
+
+        const sharedTeam = teamWithA;
+        const playerToMove = sharedTeam.players.find(player => normalize(player.name) === normalizedB)
+            || sharedTeam.players.find(player => normalize(player.name) === normalizedA);
+
+        if (!playerToMove) {
+            return;
+        }
+
+        const candidateSwaps = [];
+
+        this.teams
+            .filter(team => team.id !== sharedTeam.id)
+            .forEach(team => {
+                team.players.forEach(player => {
+                    const diff = Math.abs(player.skill - playerToMove.skill);
+                    const samePosition = player.position === playerToMove.position;
+
+                    candidateSwaps.push({
+                        team,
+                        player,
+                        samePosition,
+                        skillDiff: diff
+                    });
+                });
+            });
+
+        if (candidateSwaps.length === 0) {
+            return;
+        }
+
+        candidateSwaps.sort((a, b) => {
+            if (a.samePosition !== b.samePosition) {
+                return a.samePosition ? -1 : 1;
+            }
+
+            return a.skillDiff - b.skillDiff;
+        });
+
+        const bestSwap = candidateSwaps[0];
+        const targetTeam = bestSwap.team;
+        const targetPlayer = bestSwap.player;
+
+        const sharedIndex = sharedTeam.players.findIndex(player => player.id === playerToMove.id);
+        const targetIndex = targetTeam.players.findIndex(player => player.id === targetPlayer.id);
+
+        if (sharedIndex === -1 || targetIndex === -1) {
+            return;
+        }
+
+        sharedTeam.players[sharedIndex] = targetPlayer;
+        targetTeam.players[targetIndex] = playerToMove;
+
+        sharedTeam.totalSkill = sharedTeam.totalSkill - playerToMove.skill + targetPlayer.skill;
+        targetTeam.totalSkill = targetTeam.totalSkill - targetPlayer.skill + playerToMove.skill;
+
+        if (!bestSwap.samePosition) {
+            this.adjustTeamPositionCount(sharedTeam, playerToMove.position, -1);
+            this.adjustTeamPositionCount(sharedTeam, targetPlayer.position, 1);
+            this.adjustTeamPositionCount(targetTeam, targetPlayer.position, -1);
+            this.adjustTeamPositionCount(targetTeam, playerToMove.position, 1);
+        }
+    }
+
+    adjustTeamPositionCount(team, position, delta) {
+        const underscored = position.replace('-', '_');
+
+        team.positions[position] = (team.positions[position] || 0) + delta;
+
+        if (underscored !== position) {
+            team.positions[underscored] = (team.positions[underscored] || 0) + delta;
         }
     }
 
