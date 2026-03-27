@@ -1,16 +1,27 @@
 class TeamDrawApp {
     constructor() {
         this.players = [];
+        this.arrivals = [];
+        this.availablePeople = [
+            'Yan', 'Eduardo Aragão', 'TH', 'Jhon Luxuria', 'Jeferson',
+            'Bebê', 'kaik', 'João grandão', 'Patryck', 'Izaque',
+            'Thiago S', 'tedy', 'wil', 'Kauan', 'Diogo',
+            'João ferreira', 'Gabriel Jesus', 'Danilo souza', 'iago', 'Rubão',
+            'Robson', 'Hellio', 'kaick', 'leonny'
+        ];
         this.teams = [];
         this.loadDataFromLocalStorage();
         this.initializeEventListeners();
         this.updateUI();
+        this.populatePlayerSelect();
     }
 
     loadDataFromLocalStorage() {
-        // Tentar carregar os jogadores e times do localStorage
+        // Tentar carregar os jogadores, times, chegadas e pessoas do localStorage
         const savedPlayers = localStorage.getItem('players');
         const savedTeams = localStorage.getItem('teams');
+        const savedArrivals = localStorage.getItem('arrivals');
+        const savedPeople = localStorage.getItem('availablePeople');
 
         if (savedPlayers) {
             this.players = JSON.parse(savedPlayers);
@@ -19,12 +30,22 @@ class TeamDrawApp {
         if (savedTeams) {
             this.teams = JSON.parse(savedTeams);
         }
+
+        if (savedArrivals) {
+            this.arrivals = JSON.parse(savedArrivals);
+        }
+
+        if (savedPeople) {
+            this.availablePeople = JSON.parse(savedPeople);
+        }
     }
 
     saveDataToLocalStorage() {
-        // Salvar os jogadores e times no localStorage
+        // Salvar os jogadores, times, chegadas e pessoas no localStorage
         localStorage.setItem('players', JSON.stringify(this.players));
         localStorage.setItem('teams', JSON.stringify(this.teams));
+        localStorage.setItem('arrivals', JSON.stringify(this.arrivals));
+        localStorage.setItem('availablePeople', JSON.stringify(this.availablePeople));
     }
 
     initializeEventListeners() {
@@ -35,6 +56,7 @@ class TeamDrawApp {
             playerPosition: document.getElementById('playerPosition'),
             addPlayerBtn: document.getElementById('addPlayer'),
             drawTeamsBtn: document.getElementById('drawTeams'),
+            drawTeamsArrivedBtn: document.getElementById('drawTeamsArrived'),
             clearAllBtn: document.getElementById('clearAll'),
             numTeams: document.getElementById('numTeams'),
             playersPerTeam: document.getElementById('playersPerTeam'),
@@ -42,22 +64,192 @@ class TeamDrawApp {
             playerCount: document.getElementById('playerCount'),
             resultsSection: document.getElementById('resultsSection'),
             teamsResult: document.getElementById('teamsResult'),
-            balanceInfo: document.getElementById('balanceInfo')
+            balanceInfo: document.getElementById('balanceInfo'),
+            playerSelect: document.getElementById('playerSelect'),
+            arrivalBtn: document.getElementById('arrivalBtn'),
+            clearArrivalsBtn: document.getElementById('clearArrivals'),
+            arrivalsList: document.getElementById('arrivalsList'),
+            arrivalCount: document.getElementById('arrivalCount'),
+            newPersonName: document.getElementById('newPersonName'),
+            addPersonBtn: document.getElementById('addPersonBtn'),
+            peopleListContainer: document.getElementById('peopleListContainer'),
+            peopleCount: document.getElementById('peopleCount')
         };
 
         // Event listeners
         this.elements.addPlayerBtn.addEventListener('click', () => this.addPlayer());
         this.elements.drawTeamsBtn.addEventListener('click', () => this.drawTeams());
+        this.elements.drawTeamsArrivedBtn.addEventListener('click', () => this.drawTeamsArrived());
         this.elements.clearAllBtn.addEventListener('click', () => this.clearAll());
-        
-        // Enter key para adicionar jogador
-        this.elements.playerName.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addPlayer();
+        this.elements.arrivalBtn.addEventListener('click', () => this.registerArrival());
+        this.elements.clearArrivalsBtn.addEventListener('click', () => this.clearArrivals());
+        this.elements.addPersonBtn.addEventListener('click', () => this.addPerson());
+
+        // Enter key para adicionar pessoa
+        this.elements.newPersonName.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.addPerson();
         });
 
         // Atualizar botão de sorteio quando configurações mudarem
         this.elements.numTeams.addEventListener('change', () => this.updateDrawButton());
         this.elements.playersPerTeam.addEventListener('change', () => this.updateDrawButton());
+    }
+
+    populatePlayerSelect() {
+        const select = this.elements.playerSelect;
+        select.innerHTML = '<option value="">-- Escolha uma pessoa --</option>';
+        
+        const arrivedPeople = new Set(this.arrivals.map(a => a.name));
+        
+        const availableOptions = this.availablePeople.filter(person => !arrivedPeople.has(person));
+        availableOptions.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        availableOptions.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person;
+            option.textContent = person;
+            select.appendChild(option);
+        });
+    }
+
+    registerArrival() {
+        const selectedPerson = this.elements.playerSelect.value;
+
+        if (!selectedPerson) {
+            alert('Por favor, selecione uma pessoa!');
+            return;
+        }
+
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        const arrival = {
+            id: Date.now(),
+            name: selectedPerson,
+            time: timeString,
+            timestamp: now.getTime()
+        };
+
+        this.arrivals.push(arrival);
+        this.arrivals.sort((a, b) => a.timestamp - b.timestamp);
+        
+        this.saveDataToLocalStorage();
+        this.populatePlayerSelect();
+        this.updateArrivalsList();
+        this.elements.playerSelect.value = '';
+    }
+
+    updateArrivalsList() {
+        const container = this.elements.arrivalsList;
+        container.innerHTML = '';
+        this.elements.arrivalCount.textContent = this.arrivals.length;
+
+        this.arrivals.forEach((arrival, index) => {
+            const arrivalCard = document.createElement('div');
+            arrivalCard.className = 'arrival-card';
+            
+            arrivalCard.innerHTML = `
+                <div class="arrival-position">${index + 1}º</div>
+                <div class="arrival-info">
+                    <div class="arrival-name">${arrival.name}</div>
+                    <div class="arrival-time">⏰ ${arrival.time}</div>
+                </div>
+                <button class="remove-arrival" onclick="app.removeArrival(${arrival.id})">×</button>
+            `;
+
+            container.appendChild(arrivalCard);
+        });
+
+        // Sincronizar lista de adicionar jogador com a ordem de chegada atual
+        this.updateArrivedPlayersSelect();
+
+        // Atualizar botão de sorteio quando chegadas mudam
+        this.updateDrawButton();
+    }
+
+    removeArrival(arrivalId) {
+        this.arrivals = this.arrivals.filter(arrival => arrival.id !== arrivalId);
+        this.saveDataToLocalStorage();
+        this.populatePlayerSelect();
+        this.updateArrivalsList();
+    }
+
+    clearArrivals() {
+        if (this.arrivals.length === 0) return;
+        
+        if (confirm('Tem certeza que deseja limpar a lista de chegadas?')) {
+            this.arrivals = [];
+            this.saveDataToLocalStorage();
+            this.populatePlayerSelect();
+            this.updateArrivalsList();
+        }
+    }
+
+    addPerson() {
+        const name = this.elements.newPersonName.value.trim();
+
+        if (!name) {
+            alert('Por favor, digite o nome da pessoa!');
+            return;
+        }
+
+        // Verificar se a pessoa já existe
+        if (this.availablePeople.some(person => person.toLowerCase() === name.toLowerCase())) {
+            alert('Esta pessoa já foi cadastrada!');
+            return;
+        }
+
+        this.availablePeople.push(name);
+        this.elements.newPersonName.value = '';
+        this.saveDataToLocalStorage();
+        this.populatePlayerSelect();
+        this.updatePeopleList();
+        this.elements.newPersonName.focus();
+    }
+
+    removePerson(personName) {
+        this.availablePeople = this.availablePeople.filter(person => person !== personName);
+        this.saveDataToLocalStorage();
+        this.populatePlayerSelect();
+        this.updatePeopleList();
+    }
+
+    updatePeopleList() {
+        const container = this.elements.peopleListContainer;
+        container.innerHTML = '';
+        this.elements.peopleCount.textContent = this.availablePeople.length;
+
+        this.availablePeople.forEach(person => {
+            const chip = document.createElement('div');
+            chip.className = 'person-chip';
+            chip.innerHTML = `
+                <span>${person}</span>
+                <button class="remove-person" onclick="app.removePerson('${person.replace(/'/g, "\\'")}')">×</button>
+            `;
+            container.appendChild(chip);
+        });
+    }
+
+    updateArrivedPlayersSelect() {
+        const select = this.elements.playerName;
+        if (!select) return;
+
+        select.innerHTML = '<option value="">-- Selecione quem chegou --</option>';
+
+        const alreadyAdded = new Set(this.players.map(player => player.name.toLowerCase()));
+        const arrivalOrder = [...this.arrivals].sort((a, b) => a.timestamp - b.timestamp);
+
+        arrivalOrder.forEach(arrival => {
+            if (alreadyAdded.has(arrival.name.toLowerCase())) return;
+
+            const option = document.createElement('option');
+            option.value = arrival.name;
+            option.textContent = arrival.name;
+            select.appendChild(option);
+        });
     }
 
     addPlayer() {
@@ -66,7 +258,7 @@ class TeamDrawApp {
         const position = this.elements.playerPosition.value;
 
         if (!name) {
-            alert('Por favor, digite o nome do jogador!');
+            alert('Selecione uma pessoa que chegou!');
             return;
         }
 
@@ -87,7 +279,6 @@ class TeamDrawApp {
         this.elements.playerName.value = '';
         this.saveDataToLocalStorage();  // Salvar os dados no localStorage
         this.updateUI();
-        this.elements.playerName.focus();
     }
 
     removePlayer(playerId) {
@@ -99,6 +290,9 @@ class TeamDrawApp {
     updateUI() {
         this.updatePlayersList();
         this.updatePlayerCount();
+        this.updateArrivalsList();
+        this.updatePeopleList();
+        this.updateArrivedPlayersSelect();
         this.updateDrawButton();
     }
 
@@ -141,6 +335,7 @@ class TeamDrawApp {
         const playersPerTeam = parseInt(this.elements.playersPerTeam.value);
         const requiredPlayers = numTeams * playersPerTeam;
         
+        // Verificar se pode sortear todos
         const canDraw = this.players.length >= requiredPlayers;
         this.elements.drawTeamsBtn.disabled = !canDraw;
         
@@ -148,6 +343,20 @@ class TeamDrawApp {
             this.elements.drawTeamsBtn.textContent = `🎲 Sortear Times (${this.players.length}/${requiredPlayers} jogadores)`;
         } else {
             this.elements.drawTeamsBtn.textContent = '🎲 Sortear Times';
+        }
+
+        // Verificar se pode sortear apenas quem chegou
+        const arrivedNames = this.arrivals.map(arrival => arrival.name);
+        const arrivedPlayers = this.players.filter(player => 
+            arrivedNames.includes(player.name)
+        );
+        const canDrawArrived = arrivedPlayers.length >= requiredPlayers && this.arrivals.length > 0;
+        this.elements.drawTeamsArrivedBtn.disabled = !canDrawArrived;
+        
+        if (!canDrawArrived && arrivedPlayers.length > 0) {
+            this.elements.drawTeamsArrivedBtn.textContent = `🎲 Sortear (Quem Chegou) (${arrivedPlayers.length}/${requiredPlayers})`;
+        } else {
+            this.elements.drawTeamsArrivedBtn.textContent = '🎲 Sortear (Quem Chegou)';
         }
     }
 
@@ -157,6 +366,51 @@ class TeamDrawApp {
         
         // Criar cópia dos jogadores para não modificar o array original
         const availablePlayers = [...this.players];
+        
+        // Inicializar times vazios
+        this.teams = Array.from({ length: numTeams }, (_, i) => ({
+            id: i + 1,
+            name: `Time ${i + 1}`,
+            players: [],
+            totalSkill: 0,
+            positions: { pivo: 0, fixo: 0, meio: 0, ala_esquerda: 0 ,ala_direita: 0 }
+        }));
+
+        // Algoritmo de balanceamento
+        this.balanceTeams(availablePlayers, playersPerTeam);
+        
+        // Exibir resultados
+        this.displayResults();
+        this.saveDataToLocalStorage();  // Salvar os dados no localStorage
+    }
+
+    drawTeamsArrived() {
+        if (this.arrivals.length === 0) {
+            alert('Nenhuma pessoa chegou ainda!');
+            return;
+        }
+
+        const numTeams = parseInt(this.elements.numTeams.value);
+        const playersPerTeam = parseInt(this.elements.playersPerTeam.value);
+        
+        // Pegar nomes de quem chegou
+        const arrivedNames = this.arrivals.map(arrival => arrival.name);
+        
+        // Filtrar jogadores que chegaram
+        const availablePlayers = this.players.filter(player => 
+            arrivedNames.includes(player.name)
+        );
+
+        if (availablePlayers.length === 0) {
+            alert('Nenhum jogador cadastrado chegou ainda!');
+            return;
+        }
+
+        const requiredPlayers = numTeams * playersPerTeam;
+        if (availablePlayers.length < requiredPlayers) {
+            alert(`Você tem ${availablePlayers.length} jogadores que chegaram, mas precisa de ${requiredPlayers} para sortear ${numTeams} times com ${playersPerTeam} jogadores cada.`);
+            return;
+        }
         
         // Inicializar times vazios
         this.teams = Array.from({ length: numTeams }, (_, i) => ({
@@ -342,10 +596,11 @@ class TeamDrawApp {
     }
 
     clearAll() {
-        if (this.players.length === 0) return;
+        if (this.players.length === 0 && this.arrivals.length === 0) return;
         
-        if (confirm('Tem certeza que deseja limpar todos os jogadores?')) {
+        if (confirm('Tem certeza que deseja limpar tudo (jogadores e chegadas)?')) {
             this.players = [];
+            this.arrivals = [];
             this.teams = [];
             this.elements.resultsSection.style.display = 'none';
             this.saveDataToLocalStorage();  // Salvar os dados no localStorage

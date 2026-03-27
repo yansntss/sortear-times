@@ -14,6 +14,47 @@
         </header>
 
         <main>
+            <!-- Controle de Chegada -->
+            <section class="arrival-section">
+                <h2>⏰ Controle de Chegada</h2>
+                
+                <!-- Cadastrar Participantes -->
+                <div class="people-registration">
+                    <h3>Cadastrar Participantes</h3>
+                    <div class="registration-form">
+                        <div class="input-group">
+                            <input type="text" id="newPersonName" placeholder="Nome da pessoa" autocomplete="off">
+                        </div>
+                        <button type="button" id="addPersonBtn" class="btn-primary">+ Adicionar</button>
+                    </div>
+                    <div class="people-list">
+                        <h4>Participantes Disponíveis (<span id="peopleCount">0</span>)</h4>
+                        <div id="peopleListContainer" class="people-chips"></div>
+                    </div>
+                </div>
+
+                <div class="arrival-form">
+                    <div class="form-grid-arrival">
+                        <div class="input-group">
+                            <label for="playerSelect">Selecione o Participante:</label>
+                            <select id="playerSelect">
+                                <option value="">-- Escolha uma pessoa --</option>
+                            </select>
+                        </div>
+                        <button type="button" id="arrivalBtn" class="btn-primary">✓ Chegou</button>
+                    </div>
+                </div>
+
+                <!-- Lista de Chegadas -->
+                <div class="arrival-list">
+                    <div class="arrival-list-header">
+                        <h3>Ordem de Chegada (<span id="arrivalCount">0</span>)</h3>
+                        <button type="button" id="clearArrivals" class="btn-clear-arrivals">🗑️ Limpar</button>
+                    </div>
+                    <div id="arrivalsList" class="arrivals-grid"></div>
+                </div>
+            </section>
+
             <!-- Configuração dos Times -->
             <section class="config-section">
                 <h2>Configuração dos Times</h2>
@@ -35,8 +76,10 @@
                 <div class="player-form">
                     <div class="form-grid">
                         <div class="input-group">
-                            <label for="playerName">Nome do Jogador:</label>
-                            <input type="text" id="playerName" placeholder="Digite o nome">
+                            <label for="playerName">Nome do Jogador (ordem de chegada):</label>
+                            <select id="playerName">
+                                <option value="">-- Selecione quem chegou --</option>
+                            </select>
                         </div>
                         <div class="input-group">
                             <label for="playerSkill">Habilidade:</label>
@@ -71,6 +114,7 @@
             <section class="draw-section">
                 <div class="draw-controls">
                     <button type="button" id="drawTeams" class="btn-success" disabled>🎲 Sortear Times</button>
+                    <button type="button" id="drawTeamsArrived" class="btn-success" disabled>🎲 Sortear (Quem Chegou)</button>
                     <button type="button" id="clearAll" class="btn-danger">🗑️ Limpar Tudo</button>
                 </div>
             </section>
