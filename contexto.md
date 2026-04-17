@@ -4,8 +4,8 @@
 - Aplicacao web client-side para organizar peladas/futsal com:
 - Cadastro de participantes disponiveis.
 - Controle da ordem de chegada.
-- Cadastro de jogadores (com habilidade e posicao) a partir das chegadas.
-- Sorteio de times com balanceamento por habilidade e distribuicao de posicoes.
+- Cadastro de jogadores a partir das chegadas.
+- Sorteio de times com distribuicao por posicao.
 
 ## 2. Stack e arquitetura
 - Stack: HTML + CSS + JavaScript vanilla (sem backend e sem framework).
@@ -15,17 +15,17 @@
 Arquivos principais:
 - index.html: estrutura da interface e IDs consumidos pelo JS.
 - style.css: estilos globais, componentes e responsividade.
-- script.js: logica de estado, eventos, validacoes e algoritmo de balanceamento.
+- script.js: logica de estado, eventos, validacoes e algoritmo de sorteio.
 
 ## 3. Modelos de dados (estado em memoria)
 - players: lista de jogadores adicionados ao sorteio.
-  - Campos: id, name, skill (1-3), position.
+  - Campos: id, name, position.
 - arrivals: ordem de chegada registrada.
   - Campos: id, name, time (texto), timestamp (numero).
 - availablePeople: pessoas disponiveis para marcar chegada.
-  - Campos: name, skill (1-3 ou null), position (ou null).
+  - Campos: name, position (ou null).
 - teams: resultado do sorteio.
-  - Campos: id, name, players[], totalSkill, positions.
+  - Campos: id, name, players[], positions.
 
 Chaves de persistencia em localStorage:
 - players
@@ -34,61 +34,59 @@ Chaves de persistencia em localStorage:
 - availablePeople
 
 ## 4. Fluxo funcional atual
-1. Usuario pode cadastrar pessoas em Participantes Disponiveis, definindo nivel e habilidade/posicao ja no cadastro.
-2. Usuario tambem pode cadastrar participantes em lote colando lista no front.
-3. Usuario marca chegada selecionando um participante.
+1. Usuario pode cadastrar pessoas em Participantes Disponiveis, definindo habilidade/posicao opcional.
+2. Usuario pode cadastrar participantes em lote (lista so com nome ou lista nome-posicao).
+3. Usuario marca chegada selecionando um participante (registro automatico ao selecionar o nome).
 4. Campo de adicionar jogador mostra apenas quem chegou e ainda nao foi adicionado.
-5. Usuario adiciona jogador com habilidade e posicao opcionais.
+5. Usuario adiciona jogador com habilidade/posicao opcional.
 6. Botao de sorteio habilita apenas quando ha jogadores suficientes para preencher todos os times.
-7. Sorteio gera os times, mostra cards com jogadores e estatisticas de balanceamento.
-8. Acao rapida "Adicionar Todos e Sortear" adiciona todos os chegados pendentes com habilidade/posicao nao informadas e tenta sortear automaticamente.
-9. Opcao "Ignorar ordem de chegada" permite adicionar jogador e adicionar todos usando todos os participantes cadastrados, sem depender de arrivals.
+7. Sorteio gera os times e mostra cards com jogadores e informacoes de distribuicao.
+8. Acao rapida Adicionar Todos e Sortear adiciona todos os chegados pendentes e tenta sortear automaticamente.
+9. Opcao Ignorar ordem de chegada permite adicionar jogador e adicionar todos usando participantes cadastrados, sem depender de arrivals.
 
 ## 5. Regras de negocio implementadas
 - Nao permite cadastrar pessoa duplicada em availablePeople (comparacao case-insensitive).
-- Participante pode ser cadastrado com nivel (1-3) e habilidade/posicao opcionais.
-- Habilidade/posicao foi padronizada para apenas 3 categorias: zag, mei, atc.
+- Habilidade/posicao padronizada para apenas 3 categorias: zag, mei, atc.
 - Dados antigos com posicoes anteriores sao normalizados automaticamente para as 3 categorias.
+- Participante pode ter habilidade/posicao editada apos o cadastro, diretamente na lista de participantes.
 - Cadastro em lote aceita lista com um nome por linha e trata formatos numerados (ex.: "1. Nome").
-- Cadastro em lote aceita o padrao nome-nivel-posicao (ex.: "William-2-zag"), com nivel restrito a 1, 2 ou 3.
-- Cadastro em lote possui flag de tipo de lista com 3 modos:
-  - lista sem nivel e posicao (somente nome),
-  - lista com nivel e posicao (nome-nivel-posicao),
+- Cadastro em lote possui flag de tipo de lista com 2 modos:
+  - lista so com nome,
   - lista so com posicao (nome-posicao).
-- Cadastro em lote usa o nivel e habilidade/posicao selecionados no formulario como padrao para os nomes importados.
+- Cadastro em lote usa a habilidade/posicao selecionada no formulario como padrao para os nomes importados.
 - Cadastro em lote remove sufixo final entre parenteses (ex.: "Igor (convdd)" -> "Igor").
 - Cadastro em lote ignora nomes vazios e duplicados (ja existentes ou repetidos no proprio lote).
 - Nao permite adicionar jogador duplicado em players (comparacao case-insensitive).
-- Habilidade e posicao sao opcionais no cadastro do jogador.
+- Habilidade/posicao e opcional no cadastro do jogador.
 - Ao adicionar jogador sem informar habilidade/posicao manualmente, o sistema reaproveita os dados definidos no cadastro do participante.
-- Jogador sem habilidade informada entra com peso 0 no calculo de forca.
 - Jogador sem posicao informada entra na categoria sem-posicao para distribuicao.
-- Quando "Ignorar ordem de chegada" esta ativo, a selecao de jogadores usa availablePeople em vez de arrivals.
-- Quando "Ignorar ordem de chegada" esta ativo, "Adicionar Todos e Sortear" considera todos os participantes cadastrados pendentes.
+- Quando Ignorar ordem de chegada esta ativo, a selecao de jogadores usa availablePeople em vez de arrivals.
+- Quando Ignorar ordem de chegada esta ativo, Adicionar Todos e Sortear considera todos os participantes cadastrados pendentes.
 - Sorteio exige no minimo numTeams * playersPerTeam jogadores cadastrados.
-- Balanceamento por posicao e habilidade:
+- Balanceamento por posicao:
   - Separa jogadores por posicao.
-  - Ordena por habilidade decrescente dentro de cada posicao.
-  - Distribui para o time com menor quantidade da posicao e, em empate, menor forca total.
-  - Distribui remanescentes para time com menos jogadores e menor forca.
+  - Distribui para o time com menor quantidade da posicao e, em empate, menor quantidade total de jogadores.
+  - Distribui remanescentes para time com menos jogadores.
 - Regra especial hardcoded:
   - Yan e Jhon Luxuria nao podem ficar no mesmo time.
-  - Se ficarem juntos, o algoritmo tenta swap com outro time priorizando mesma posicao e menor diferenca de habilidade.
+  - Se ficarem juntos, o algoritmo tenta swap priorizando mesma posicao.
 
 ## 6. Comportamentos de UI relevantes
 - Tela organizada por secoes: chegadas, configuracao, jogadores, sorteio e resultado.
 - Listas de chegadas, jogadores e participantes com remocao individual.
-- Chips de participantes exibem nome, nivel e habilidade/posicao cadastrados.
+- Chips de participantes exibem nome e habilidade/posicao cadastrados.
+- Chips de participantes permitem editar habilidade/posicao por select inline, com salvamento imediato.
+- No resultado do sorteio, a habilidade individual fica oculta; os cards exibem nome e posicao.
+- Importacao em lote fica em bloco recolhivel (opcional), reduzindo poluicao visual no celular.
+- Em telas pequenas, os controles principais usam alvos maiores e layout em coluna para facilitar toque.
+- Barra de acoes fixa no mobile adiciona atalhos para Adicionar Todos e Sortear sem rolar a tela.
 - Botao Limpar Cadastrados limpa toda a lista de participantes disponiveis (availablePeople) com confirmacao.
 - Botao Limpar chegadas limpa apenas arrivals.
 - Botao Limpar tudo limpa players, arrivals e teams (mantem availablePeople).
-- Botao "Adicionar Todos e Sortear" usa os nomes da ordem de chegada que ainda nao viraram jogadores e executa sorteio se atingir minimo.
-- Checkbox "Ignorar ordem de chegada" troca a fonte do seletor de jogador e da acao rapida para participantes cadastrados.
-- Interface responsiva para tablet/mobile via media queries em 768px e 480px.
 
 ## 7. Pontos de atencao tecnicos
-- Categorias de habilidade/posicao atuais sao zag, mei e atc. A normalizacao mantem compatibilidade com registros legados.
-- Interacoes de remocao usam onclick inline no HTML gerado por JS.
+- Categorias de habilidade/posicao atuais sao zag, mei e atc.
+- Interacoes de remocao de jogador/chegada usam onclick inline no HTML gerado por JS.
 - IDs baseados em Date.now() podem colidir em cliques extremamente rapidos (baixo risco no uso atual).
 
 ## 8. Limites e escopo atual

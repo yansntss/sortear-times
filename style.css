@@ -34,6 +34,12 @@ header p {
     opacity: 0.9;
 }
 
+.mobile-hint {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    opacity: 0.95;
+}
+
 main {
     background: white;
     border-radius: 20px;
@@ -67,7 +73,7 @@ h3 {
 
 .form-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr auto;
     gap: 15px;
     align-items: end;
 }
@@ -137,6 +143,10 @@ button {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.mobile-sticky-actions {
+    display: none;
 }
 
 .btn-primary {
@@ -211,15 +221,6 @@ button {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
-}
-
-.player-skill {
-    background: linear-gradient(135deg, #ffd700, #ffed4e);
-    color: #744210;
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 600;
 }
 
 .player-position {
@@ -381,7 +382,7 @@ button {
 
 .registration-form {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr auto;
     gap: 10px;
     align-items: end;
     margin-bottom: 20px;
@@ -398,6 +399,13 @@ button {
 
 .bulk-registration {
     margin-bottom: 20px;
+}
+
+.bulk-registration summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #15803d;
+    margin-bottom: 10px;
 }
 
 .bulk-registration label {
@@ -464,9 +472,19 @@ button {
     box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
 }
 
-.person-chip small {
+.person-chip-name {
     color: #166534;
+    font-weight: 700;
+}
+
+.person-chip-select {
+    border: 1px solid #86efac;
+    background: #f0fdf4;
+    color: #166534;
+    border-radius: 14px;
+    padding: 4px 8px;
     font-size: 0.82rem;
+    min-width: 120px;
 }
 
 .remove-person {
@@ -594,7 +612,7 @@ button {
 /* Responsividade */
 @media (max-width: 768px) {
     .container {
-        padding: 15px;
+        padding: 10px;
     }
     
     header h1 {
@@ -603,7 +621,7 @@ button {
     
     .form-grid {
         grid-template-columns: 1fr;
-        gap: 15px;
+        gap: 12px;
     }
 
     .quick-actions {
@@ -620,6 +638,23 @@ button {
     
     .registration-form {
         grid-template-columns: 1fr;
+    }
+
+    input, select, textarea, button {
+        min-height: 46px;
+        font-size: 1rem;
+    }
+
+    .person-chip {
+        width: 100%;
+        border-radius: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .person-chip-select {
+        min-width: 0;
+        width: 100%;
     }
     
     .arrival-list-header {
@@ -640,6 +675,11 @@ button {
         flex-direction: column;
         align-items: center;
     }
+
+    .draw-controls .btn-success,
+    .draw-controls .btn-danger {
+        width: 100%;
+    }
     
     .teams-grid {
         grid-template-columns: 1fr;
@@ -647,6 +687,26 @@ button {
     
     .balance-stats {
         grid-template-columns: 1fr;
+    }
+
+    .mobile-sticky-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(6px);
+        padding: 10px;
+        border-top: 1px solid #e2e8f0;
+        margin: 10px -20px -20px;
+    }
+
+    .mobile-sticky-actions button {
+        width: 100%;
+        padding: 12px 10px;
+        font-size: 0.95rem;
     }
 }
 

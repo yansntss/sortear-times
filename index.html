@@ -11,6 +11,7 @@
         <header>
             <h1>⚽ Sorteio de Times</h1>
             <p>Crie times balanceados considerando habilidade e posição dos jogadores</p>
+            <p class="mobile-hint">Fluxo rapido: 1) cadastre participantes 2) marque chegadas 3) toque em adicionar todos e sortear.</p>
         </header>
 
         <main>
@@ -26,15 +27,6 @@
                             <input type="text" id="newPersonName" placeholder="Nome da pessoa" autocomplete="off">
                         </div>
                         <div class="input-group">
-                            <label for="newPersonSkill">Nível:</label>
-                            <select id="newPersonSkill">
-                                <option value="" selected>Não informar</option>
-                                <option value="1">⭐ 1</option>
-                                <option value="2">⭐⭐ 2</option>
-                                <option value="3">⭐⭐⭐ 3</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
                             <label for="newPersonPosition">Habilidade/Posição:</label>
                             <select id="newPersonPosition">
                                 <option value="" selected>Não informar</option>
@@ -45,17 +37,17 @@
                         </div>
                         <button type="button" id="addPersonBtn" class="btn-primary">+ Adicionar</button>
                     </div>
-                    <div class="bulk-registration">
+                    <details class="bulk-registration" id="bulkRegistration">
+                        <summary>Importacao em lote (opcional)</summary>
                         <label for="bulkListType">Tipo da lista:</label>
                         <select id="bulkListType">
-                            <option value="name-only">Lista sem nivel e posicao</option>
-                            <option value="name-skill-position" selected>Lista com nivel e posicao</option>
-                            <option value="name-position">Lista so com posicao</option>
+                            <option value="name-only">Lista so com nome</option>
+                            <option value="name-position" selected>Lista so com posicao</option>
                         </select>
                         <label for="bulkPeopleInput">Cole a lista:</label>
-                        <textarea id="bulkPeopleInput" rows="6" placeholder="William-2-zag&#10;John-3-atc&#10;Iago-1-mei"></textarea>
+                        <textarea id="bulkPeopleInput" rows="6" placeholder="William-zag&#10;John-atc&#10;Iago-mei"></textarea>
                         <button type="button" id="addPeopleBulkBtn" class="btn-primary">+ Adicionar Lista</button>
-                    </div>
+                    </details>
                     <div class="people-list">
                         <div class="people-list-header">
                             <h4>Participantes Disponíveis (<span id="peopleCount">0</span>)</h4>
@@ -114,15 +106,6 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="playerSkill">Nível:</label>
-                            <select id="playerSkill">
-                                <option value="" selected>Não informar</option>
-                                <option value="1">⭐ 1 Estrela</option>
-                                <option value="2">⭐⭐ 2 Estrelas</option>
-                                <option value="3">⭐⭐⭐ 3 Estrelas</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
                             <label for="playerPosition">Habilidade:</label>
                             <select id="playerPosition">
                                 <option value="" selected>Não informar</option>
@@ -158,6 +141,11 @@
                     <button type="button" id="clearAll" class="btn-danger">🗑️ Limpar Tudo</button>
                 </div>
             </section>
+
+            <div class="mobile-sticky-actions">
+                <button type="button" id="mobileAddAllAndDraw" class="btn-primary">⚡ Add Todos</button>
+                <button type="button" id="mobileDrawTeams" class="btn-success" disabled>🎲 Sortear</button>
+            </div>
 
             <!-- Resultado dos Times -->
             <section class="results-section" id="resultsSection" style="display: none;">

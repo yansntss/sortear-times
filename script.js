@@ -44,12 +44,8 @@ class TeamDrawApp {
             .filter(person => person.name);
 
         this.players = this.players.map(player => {
-            const parsedSkill = parseInt(player.skill, 10);
-            const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
-
             return {
                 ...player,
-                skill,
                 position: this.normalizePosition(player.position)
             };
         });
@@ -65,19 +61,15 @@ class TeamDrawApp {
 
     normalizePersonRecord(person) {
         if (typeof person === 'string') {
-            return { name: person, skill: null, position: null };
+            return { name: person, position: null };
         }
 
         if (!person || typeof person !== 'object') {
-            return { name: '', skill: null, position: null };
+            return { name: '', position: null };
         }
-
-        const parsedSkill = parseInt(person.skill, 10);
-        const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
 
         return {
             name: (person.name || '').trim(),
-            skill,
             position: this.normalizePosition(person.position)
         };
     }
@@ -113,11 +105,12 @@ class TeamDrawApp {
         // Elementos do DOM
         this.elements = {
             playerName: document.getElementById('playerName'),
-            playerSkill: document.getElementById('playerSkill'),
             playerPosition: document.getElementById('playerPosition'),
             ignoreArrivalOrder: document.getElementById('ignoreArrivalOrder'),
             addPlayerBtn: document.getElementById('addPlayer'),
             addAllAndDrawBtn: document.getElementById('addAllAndDraw'),
+            mobileAddAllAndDrawBtn: document.getElementById('mobileAddAllAndDraw'),
+            mobileDrawTeamsBtn: document.getElementById('mobileDrawTeams'),
             drawTeamsBtn: document.getElementById('drawTeams'),
             clearAllBtn: document.getElementById('clearAll'),
             numTeams: document.getElementById('numTeams'),
@@ -133,7 +126,6 @@ class TeamDrawApp {
             arrivalsList: document.getElementById('arrivalsList'),
             arrivalCount: document.getElementById('arrivalCount'),
             newPersonName: document.getElementById('newPersonName'),
-            newPersonSkill: document.getElementById('newPersonSkill'),
             newPersonPosition: document.getElementById('newPersonPosition'),
             addPersonBtn: document.getElementById('addPersonBtn'),
             bulkListType: document.getElementById('bulkListType'),
@@ -147,7 +139,9 @@ class TeamDrawApp {
         // Event listeners
         this.elements.addPlayerBtn.addEventListener('click', () => this.addPlayer());
         this.elements.addAllAndDrawBtn.addEventListener('click', () => this.addAllAndDraw());
+        this.elements.mobileAddAllAndDrawBtn.addEventListener('click', () => this.addAllAndDraw());
         this.elements.drawTeamsBtn.addEventListener('click', () => this.drawTeams());
+        this.elements.mobileDrawTeamsBtn.addEventListener('click', () => this.drawTeams());
         this.elements.clearAllBtn.addEventListener('click', () => this.clearAll());
         this.elements.arrivalBtn.addEventListener('click', () => this.registerArrival());
         this.elements.clearArrivalsBtn.addEventListener('click', () => this.clearArrivals());
@@ -156,6 +150,11 @@ class TeamDrawApp {
         this.elements.clearPeopleBtn.addEventListener('click', () => this.clearPeople());
         this.elements.ignoreArrivalOrder.addEventListener('change', () => this.updateArrivedPlayersSelect());
         this.elements.bulkListType.addEventListener('change', () => this.updateBulkInputHint());
+        this.elements.playerSelect.addEventListener('change', () => {
+            if (this.elements.playerSelect.value) {
+                this.registerArrival();
+            }
+        });
 
         // Enter key para adicionar pessoa
         this.elements.newPersonName.addEventListener('keypress', (e) => {
@@ -173,11 +172,10 @@ class TeamDrawApp {
         const type = this.elements.bulkListType.value;
         const placeholderByType = {
             'name-only': 'William\nJohn\nIago',
-            'name-skill-position': 'William-2-zag\nJohn-3-atc\nIago-1-mei',
             'name-position': 'William-zag\nJohn-atc\nIago-mei'
         };
 
-        this.elements.bulkPeopleInput.placeholder = placeholderByType[type] || placeholderByType['name-skill-position'];
+        this.elements.bulkPeopleInput.placeholder = placeholderByType[type] || placeholderByType['name-position'];
     }
 
     populatePlayerSelect() {
@@ -277,8 +275,6 @@ class TeamDrawApp {
 
     addPerson() {
         const name = this.elements.newPersonName.value.trim();
-        const parsedSkill = parseInt(this.elements.newPersonSkill.value, 10);
-        const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
         const position = this.normalizePosition(this.elements.newPersonPosition.value);
 
         if (!name) {
@@ -292,9 +288,8 @@ class TeamDrawApp {
             return;
         }
 
-        this.availablePeople.push({ name, skill, position });
+        this.availablePeople.push({ name, position });
         this.elements.newPersonName.value = '';
-        this.elements.newPersonSkill.value = '';
         this.elements.newPersonPosition.value = '';
         this.saveDataToLocalStorage();
         this.populatePlayerSelect();
@@ -321,21 +316,7 @@ class TeamDrawApp {
         if (listType === 'name-only') {
             return {
                 name: cleaned,
-                skill: null,
                 position: null
-            };
-        }
-
-        if (listType === 'name-skill-position' && tokens.length >= 3) {
-            const rawLevel = tokens[tokens.length - 2];
-            const rawPosition = tokens[tokens.length - 1];
-            const name = tokens.slice(0, -2).join(' - ').trim();
-            const parsedLevel = parseInt(rawLevel, 10);
-
-            return {
-                name,
-                skill: [1, 2, 3].includes(parsedLevel) ? parsedLevel : null,
-                position: this.normalizePosition(rawPosition)
             };
         }
 
@@ -345,14 +326,12 @@ class TeamDrawApp {
 
             return {
                 name,
-                skill: null,
                 position: this.normalizePosition(rawPosition)
             };
         }
 
         return {
             name: cleaned,
-            skill: null,
             position: null
         };
     }
@@ -376,8 +355,6 @@ class TeamDrawApp {
             return;
         }
 
-        const defaultSkillParsed = parseInt(this.elements.newPersonSkill.value, 10);
-        const defaultSkill = Number.isNaN(defaultSkillParsed) ? null : defaultSkillParsed;
         const defaultPosition = this.normalizePosition(this.elements.newPersonPosition.value);
         const existingNames = new Set(this.availablePeople.map(person => person.name.toLowerCase()));
         const seenInBatch = new Set();
@@ -394,7 +371,6 @@ class TeamDrawApp {
 
             this.availablePeople.push({
                 name: entry.name,
-                skill: entry.skill ?? defaultSkill,
                 position: entry.position ?? defaultPosition
             });
             seenInBatch.add(key);
@@ -426,6 +402,16 @@ class TeamDrawApp {
         this.updatePeopleList();
     }
 
+    updatePersonPosition(personName, rawPosition) {
+        const normalized = personName.toLowerCase();
+        const person = this.availablePeople.find(item => item.name.toLowerCase() === normalized);
+        if (!person) return;
+
+        person.position = this.normalizePosition(rawPosition);
+        this.saveDataToLocalStorage();
+        this.updatePeopleList();
+    }
+
     clearPeople() {
         if (this.availablePeople.length === 0) return;
 
@@ -445,18 +431,35 @@ class TeamDrawApp {
         this.availablePeople.forEach(person => {
             const chip = document.createElement('div');
             chip.className = 'person-chip';
-            const skillLabel = this.getSkillValue(person.skill) > 0 ? `${'⭐'.repeat(this.getSkillValue(person.skill))}` : 'Sem nível';
-            const positionNames = {
-                zag: 'zag',
-                mei: 'mei',
-                atc: 'atc'
-            };
-            const positionLabel = positionNames[person.position] || 'Sem habilidade';
-            chip.innerHTML = `
-                <span>${person.name}</span>
-                <small>(${skillLabel} | ${positionLabel})</small>
-                <button class="remove-person" onclick="app.removePerson('${person.name.replace(/'/g, "\\'")}')">×</button>
+
+            const name = document.createElement('span');
+            name.className = 'person-chip-name';
+            name.textContent = person.name;
+
+            const positionSelect = document.createElement('select');
+            positionSelect.className = 'person-chip-select';
+            positionSelect.innerHTML = `
+                <option value="">Hab: nao informar</option>
+                <option value="zag">Hab: zag</option>
+                <option value="mei">Hab: mei</option>
+                <option value="atc">Hab: atc</option>
             `;
+            positionSelect.value = person.position || '';
+            positionSelect.addEventListener('change', (event) => {
+                this.updatePersonPosition(person.name, event.target.value);
+            });
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-person';
+            removeBtn.type = 'button';
+            removeBtn.textContent = '×';
+            removeBtn.setAttribute('aria-label', `Remover ${person.name}`);
+            removeBtn.addEventListener('click', () => this.removePerson(person.name));
+
+            chip.appendChild(name);
+            chip.appendChild(positionSelect);
+            chip.appendChild(removeBtn);
+
             container.appendChild(chip);
         });
     }
@@ -490,9 +493,7 @@ class TeamDrawApp {
 
     addPlayer() {
         const name = this.elements.playerName.value.trim();
-        const parsedSkill = parseInt(this.elements.playerSkill.value, 10);
         const participant = this.findPersonByName(name);
-        const skill = Number.isNaN(parsedSkill) ? (participant?.skill ?? null) : parsedSkill;
         const position = this.normalizePosition(this.elements.playerPosition.value) || (participant?.position ?? null);
 
         if (!name) {
@@ -512,13 +513,11 @@ class TeamDrawApp {
         const player = {
             id: Date.now(),
             name,
-            skill,
             position
         };
 
         this.players.push(player);
         this.elements.playerName.value = '';
-        this.elements.playerSkill.value = '';
         this.elements.playerPosition.value = '';
         this.saveDataToLocalStorage();  // Salvar os dados no localStorage
         this.updateUI();
@@ -551,7 +550,6 @@ class TeamDrawApp {
             this.players.push({
                 id: nowBase + index,
                 name,
-                skill: participant?.skill ?? null,
                 position: participant?.position ?? null
             });
         });
@@ -594,9 +592,7 @@ class TeamDrawApp {
         this.players.forEach(player => {
             const playerCard = document.createElement('div');
             playerCard.className = 'player-card';
-            
-            const skillValue = this.getSkillValue(player.skill);
-            const stars = skillValue > 0 ? '⭐'.repeat(skillValue) : 'Sem habilidade';
+
             const positionNames = {
                 zag: 'zag',
                 mei: 'mei',
@@ -608,7 +604,6 @@ class TeamDrawApp {
                 <button class="remove-player" onclick="app.removePlayer(${player.id})">×</button>
                 <div class="player-name">${player.name}</div>
                 <div class="player-details">
-                    <span class="player-skill">${stars}</span>
                     <span class="player-position">${positionLabel}</span>
                 </div>
             `;
@@ -629,11 +624,15 @@ class TeamDrawApp {
         // Verificar se pode sortear todos
         const canDraw = this.players.length >= requiredPlayers;
         this.elements.drawTeamsBtn.disabled = !canDraw;
+        this.elements.mobileDrawTeamsBtn.disabled = !canDraw;
         
         if (!canDraw && this.players.length > 0) {
+            const text = `🎲 Sortear (${this.players.length}/${requiredPlayers})`;
             this.elements.drawTeamsBtn.textContent = `🎲 Sortear Times (${this.players.length}/${requiredPlayers} jogadores)`;
+            this.elements.mobileDrawTeamsBtn.textContent = text;
         } else {
             this.elements.drawTeamsBtn.textContent = '🎲 Sortear Times';
+            this.elements.mobileDrawTeamsBtn.textContent = '🎲 Sortear';
         }
     }
 
@@ -649,7 +648,6 @@ class TeamDrawApp {
             id: i + 1,
             name: `Time ${i + 1}`,
             players: [],
-            totalSkill: 0,
             positions: {
                 zag: 0,
                 mei: 0,
@@ -678,11 +676,6 @@ class TeamDrawApp {
             'sem-posicao': availablePlayers.filter(p => !p.position || !knownPositions.includes(p.position))
         };
 
-        // Ordenar cada posição por habilidade (decrescente)
-        Object.keys(playersByPosition).forEach(position => {
-            playersByPosition[position].sort((a, b) => this.getSkillValue(b.skill) - this.getSkillValue(a.skill));
-        });
-
         // Distribuir jogadores por posição de forma balanceada
         const positions = ['zag', 'mei', 'atc', 'sem-posicao'];
         
@@ -690,16 +683,14 @@ class TeamDrawApp {
             for (const position of positions) {
                 if (playersByPosition[position].length === 0) continue;
                 
-                // Encontrar o time com menor força total para esta posição
+                // Encontrar o time com menos jogadores nessa posição
                 const sortedTeams = this.teams
                     .filter(team => team.players.length < playersPerTeam)
                     .sort((a, b) => {
-                        // Priorizar times com menos jogadores desta posição
                         const positionDiff = a.positions[position] - b.positions[position];
                         if (positionDiff !== 0) return positionDiff;
-                        
-                        // Se igual, priorizar time com menor força total
-                        return a.totalSkill - b.totalSkill;
+
+                        return a.players.length - b.players.length;
                     });
 
                 if (sortedTeams.length > 0 && playersByPosition[position].length > 0) {
@@ -707,7 +698,6 @@ class TeamDrawApp {
                     const player = playersByPosition[position].shift();
                     
                     team.players.push(player);
-                    team.totalSkill += this.getSkillValue(player.skill);
                     this.adjustTeamPositionCount(team, player.position || 'sem-posicao', 1);
                 }
             }
@@ -715,20 +705,14 @@ class TeamDrawApp {
 
         // Se ainda restam jogadores, distribuir pelos times com menos jogadores
         const remainingPlayers = Object.values(playersByPosition).flat();
-        remainingPlayers.sort((a, b) => this.getSkillValue(b.skill) - this.getSkillValue(a.skill));
 
         for (const player of remainingPlayers) {
             const teamWithFewestPlayers = this.teams
                 .filter(team => team.players.length < playersPerTeam)
-                .sort((a, b) => {
-                    const playerDiff = a.players.length - b.players.length;
-                    if (playerDiff !== 0) return playerDiff;
-                    return a.totalSkill - b.totalSkill;
-                })[0];
+                .sort((a, b) => a.players.length - b.players.length)[0];
 
             if (teamWithFewestPlayers) {
                 teamWithFewestPlayers.players.push(player);
-                teamWithFewestPlayers.totalSkill += this.getSkillValue(player.skill);
                 this.adjustTeamPositionCount(teamWithFewestPlayers, player.position || 'sem-posicao', 1);
             }
         }
@@ -767,14 +751,12 @@ class TeamDrawApp {
             .filter(team => team.id !== sharedTeam.id)
             .forEach(team => {
                 team.players.forEach(player => {
-                    const diff = Math.abs(this.getSkillValue(player.skill) - this.getSkillValue(playerToMove.skill));
                     const samePosition = player.position === playerToMove.position;
 
                     candidateSwaps.push({
                         team,
                         player,
-                        samePosition,
-                        skillDiff: diff
+                        samePosition
                     });
                 });
             });
@@ -788,7 +770,7 @@ class TeamDrawApp {
                 return a.samePosition ? -1 : 1;
             }
 
-            return a.skillDiff - b.skillDiff;
+            return a.team.players.length - b.team.players.length;
         });
 
         const bestSwap = candidateSwaps[0];
@@ -805,20 +787,12 @@ class TeamDrawApp {
         sharedTeam.players[sharedIndex] = targetPlayer;
         targetTeam.players[targetIndex] = playerToMove;
 
-        sharedTeam.totalSkill = sharedTeam.totalSkill - this.getSkillValue(playerToMove.skill) + this.getSkillValue(targetPlayer.skill);
-        targetTeam.totalSkill = targetTeam.totalSkill - this.getSkillValue(targetPlayer.skill) + this.getSkillValue(playerToMove.skill);
-
         if (!bestSwap.samePosition) {
             this.adjustTeamPositionCount(sharedTeam, playerToMove.position || 'sem-posicao', -1);
             this.adjustTeamPositionCount(sharedTeam, targetPlayer.position || 'sem-posicao', 1);
             this.adjustTeamPositionCount(targetTeam, targetPlayer.position || 'sem-posicao', -1);
             this.adjustTeamPositionCount(targetTeam, playerToMove.position || 'sem-posicao', 1);
         }
-    }
-
-    getSkillValue(skill) {
-        if (typeof skill !== 'number' || Number.isNaN(skill)) return 0;
-        return skill;
     }
 
     adjustTeamPositionCount(team, position, delta) {
@@ -854,9 +828,6 @@ class TeamDrawApp {
             const teamCard = document.createElement('div');
             teamCard.className = 'team-card';
 
-            const avgSkill = team.players.length > 0 ? 
-                (team.totalSkill / team.players.length).toFixed(1) : 0;
-
             const positionNames = {
                 zag: 'zag',
                 mei: 'mei',
@@ -867,7 +838,7 @@ class TeamDrawApp {
                 <div class="team-header">
                     <div class="team-name">${team.name}</div>
                     <div class="team-stats">
-                        Força Total: ${team.totalSkill} | Média: ${avgSkill} ⭐
+                        Jogadores: ${team.players.length}
                     </div>
                 </div>
                 <ul class="team-players">
@@ -875,7 +846,6 @@ class TeamDrawApp {
                         <li class="team-player">
                             <div class="team-player-name">${player.name}</div>
                             <div class="team-player-info">
-                                <span>${this.getSkillValue(player.skill) > 0 ? '⭐'.repeat(this.getSkillValue(player.skill)) : 'Sem habilidade'}</span>
                                 <span>${positionNames[player.position] || 'Sem posição'}</span>
                             </div>
                         </li>
@@ -889,34 +859,25 @@ class TeamDrawApp {
 
     displayBalanceInfo() {
         const container = this.elements.balanceInfo;
-        
-        // Calcular estatísticas de balanceamento
-        const teamSkills = this.teams.map(team => team.totalSkill);
-        const maxSkill = Math.max(...teamSkills);
-        const minSkill = Math.min(...teamSkills);
-        const avgSkill = (teamSkills.reduce((a, b) => a + b, 0) / teamSkills.length).toFixed(1);
-        const skillDifference = maxSkill - minSkill;
-        
-        // Calcular distribuição de posições
-        const positionDistribution = {};
-        const positions = ['zag', 'mei', 'atc', 'sem_posicao'];
-        
-        positions.forEach(position => {
-            const counts = this.teams.map(team => team.positions[position]);
-            const max = Math.max(...counts);
-            const min = Math.min(...counts);
-            positionDistribution[position] = { max, min, diff: max - min };
-        });
+        const teamSizes = this.teams.map(team => team.players.length);
+        const maxPlayers = Math.max(...teamSizes);
+        const minPlayers = Math.min(...teamSizes);
+        const avgPlayers = (teamSizes.reduce((a, b) => a + b, 0) / teamSizes.length).toFixed(1);
+        const playersDifference = maxPlayers - minPlayers;
+        const withKnownPosition = this.teams
+            .flatMap(team => team.players)
+            .filter(player => !!player.position).length;
+        const totalPlayers = this.teams.flatMap(team => team.players).length;
 
         container.innerHTML = `
             <div class="balance-stats">
                 <div class="balance-stat">
-                    <div class="balance-stat-value">${avgSkill}</div>
-                    <div class="balance-stat-label">Força Média</div>
+                    <div class="balance-stat-value">${avgPlayers}</div>
+                    <div class="balance-stat-label">Media de Jogadores</div>
                 </div>
                 <div class="balance-stat">
-                    <div class="balance-stat-value">${skillDifference}</div>
-                    <div class="balance-stat-label">Diferença de Força</div>
+                    <div class="balance-stat-value">${playersDifference}</div>
+                    <div class="balance-stat-label">Diferença de Jogadores</div>
                 </div>
                 <div class="balance-stat">
                     <div class="balance-stat-value">${this.teams.length}</div>
@@ -925,6 +886,10 @@ class TeamDrawApp {
                 <div class="balance-stat">
                     <div class="balance-stat-value">${this.teams[0]?.players.length || 0}</div>
                     <div class="balance-stat-label">Jogadores por Time</div>
+                </div>
+                <div class="balance-stat">
+                    <div class="balance-stat-value">${withKnownPosition}/${totalPlayers}</div>
+                    <div class="balance-stat-label">Com Posicao Definida</div>
                 </div>
             </div>
         `;
