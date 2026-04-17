@@ -25,10 +25,42 @@
                         <div class="input-group">
                             <input type="text" id="newPersonName" placeholder="Nome da pessoa" autocomplete="off">
                         </div>
+                        <div class="input-group">
+                            <label for="newPersonSkill">Nível:</label>
+                            <select id="newPersonSkill">
+                                <option value="" selected>Não informar</option>
+                                <option value="1">⭐ 1</option>
+                                <option value="2">⭐⭐ 2</option>
+                                <option value="3">⭐⭐⭐ 3</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="newPersonPosition">Habilidade/Posição:</label>
+                            <select id="newPersonPosition">
+                                <option value="" selected>Não informar</option>
+                                <option value="zag">zag</option>
+                                <option value="mei">mei</option>
+                                <option value="atc">atc</option>
+                            </select>
+                        </div>
                         <button type="button" id="addPersonBtn" class="btn-primary">+ Adicionar</button>
                     </div>
+                    <div class="bulk-registration">
+                        <label for="bulkListType">Tipo da lista:</label>
+                        <select id="bulkListType">
+                            <option value="name-only">Lista sem nivel e posicao</option>
+                            <option value="name-skill-position" selected>Lista com nivel e posicao</option>
+                            <option value="name-position">Lista so com posicao</option>
+                        </select>
+                        <label for="bulkPeopleInput">Cole a lista:</label>
+                        <textarea id="bulkPeopleInput" rows="6" placeholder="William-2-zag&#10;John-3-atc&#10;Iago-1-mei"></textarea>
+                        <button type="button" id="addPeopleBulkBtn" class="btn-primary">+ Adicionar Lista</button>
+                    </div>
                     <div class="people-list">
-                        <h4>Participantes Disponíveis (<span id="peopleCount">0</span>)</h4>
+                        <div class="people-list-header">
+                            <h4>Participantes Disponíveis (<span id="peopleCount">0</span>)</h4>
+                            <button type="button" id="clearPeople" class="btn-clear-arrivals">🗑️ Limpar Cadastrados</button>
+                        </div>
                         <div id="peopleListContainer" class="people-chips"></div>
                     </div>
                 </div>
@@ -82,24 +114,33 @@
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="playerSkill">Habilidade:</label>
+                            <label for="playerSkill">Nível:</label>
                             <select id="playerSkill">
+                                <option value="" selected>Não informar</option>
                                 <option value="1">⭐ 1 Estrela</option>
-                                <option value="2" selected>⭐⭐ 2 Estrelas</option>
+                                <option value="2">⭐⭐ 2 Estrelas</option>
                                 <option value="3">⭐⭐⭐ 3 Estrelas</option>
                             </select>
                         </div>
                         <div class="input-group">
-                            <label for="playerPosition">Posição:</label>
+                            <label for="playerPosition">Habilidade:</label>
                             <select id="playerPosition">
-                                <option value="pivo">Pivô</option>
-                                <option value="fixo">Fixo</option>
-                                <option value="meio" selected>Meio</option>
-                                <option value="ala-esquerda">Ala esquerda</option>
-                                <option value="ala-direita">Ala-direita</option>
+                                <option value="" selected>Não informar</option>
+                                <option value="zag">zag</option>
+                                <option value="mei">mei</option>
+                                <option value="atc">atc</option>
                             </select>
                         </div>
                         <button type="button" id="addPlayer" class="btn-primary">Adicionar Jogador</button>
+                    </div>
+                    <div class="ignore-arrival-toggle">
+                        <label>
+                            <input type="checkbox" id="ignoreArrivalOrder">
+                            Ignorar ordem de chegada
+                        </label>
+                    </div>
+                    <div class="quick-actions">
+                        <button type="button" id="addAllAndDraw" class="btn-success">⚡ Adicionar Todos e Sortear</button>
                     </div>
                 </div>
 

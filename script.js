@@ -8,7 +8,7 @@ class TeamDrawApp {
             'Thiago S', 'tedy', 'wil', 'Kauan', 'Diogo',
             'João ferreira', 'Gabriel Jesus', 'Danilo souza', 'iago', 'Rubão',
             'Robson', 'Hellio', 'kaick', 'leonny'
-        ];
+        ].map(name => this.normalizePersonRecord(name));
         this.teams = [];
         this.loadDataFromLocalStorage();
         this.initializeEventListeners();
@@ -38,6 +38,21 @@ class TeamDrawApp {
         if (savedPeople) {
             this.availablePeople = JSON.parse(savedPeople);
         }
+
+        this.availablePeople = this.availablePeople
+            .map(person => this.normalizePersonRecord(person))
+            .filter(person => person.name);
+
+        this.players = this.players.map(player => {
+            const parsedSkill = parseInt(player.skill, 10);
+            const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
+
+            return {
+                ...player,
+                skill,
+                position: this.normalizePosition(player.position)
+            };
+        });
     }
 
     saveDataToLocalStorage() {
@@ -48,13 +63,61 @@ class TeamDrawApp {
         localStorage.setItem('availablePeople', JSON.stringify(this.availablePeople));
     }
 
+    normalizePersonRecord(person) {
+        if (typeof person === 'string') {
+            return { name: person, skill: null, position: null };
+        }
+
+        if (!person || typeof person !== 'object') {
+            return { name: '', skill: null, position: null };
+        }
+
+        const parsedSkill = parseInt(person.skill, 10);
+        const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
+
+        return {
+            name: (person.name || '').trim(),
+            skill,
+            position: this.normalizePosition(person.position)
+        };
+    }
+
+    normalizePosition(position) {
+        if (!position) return null;
+
+        const normalized = String(position).trim().toLowerCase();
+        const mapping = {
+            zag: 'zag',
+            mei: 'mei',
+            atc: 'atc',
+            fixo: 'zag',
+            meio: 'mei',
+            pivo: 'atc',
+            'ala-esquerda': 'atc',
+            'ala-direita': 'atc',
+            'ala esquerda': 'atc',
+            'ala direita': 'atc'
+        };
+
+        return mapping[normalized] || null;
+    }
+
+    findPersonByName(name) {
+        const target = (name || '').trim().toLowerCase();
+        if (!target) return null;
+
+        return this.availablePeople.find(person => person.name.toLowerCase() === target) || null;
+    }
+
     initializeEventListeners() {
         // Elementos do DOM
         this.elements = {
             playerName: document.getElementById('playerName'),
             playerSkill: document.getElementById('playerSkill'),
             playerPosition: document.getElementById('playerPosition'),
+            ignoreArrivalOrder: document.getElementById('ignoreArrivalOrder'),
             addPlayerBtn: document.getElementById('addPlayer'),
+            addAllAndDrawBtn: document.getElementById('addAllAndDraw'),
             drawTeamsBtn: document.getElementById('drawTeams'),
             clearAllBtn: document.getElementById('clearAll'),
             numTeams: document.getElementById('numTeams'),
@@ -70,18 +133,29 @@ class TeamDrawApp {
             arrivalsList: document.getElementById('arrivalsList'),
             arrivalCount: document.getElementById('arrivalCount'),
             newPersonName: document.getElementById('newPersonName'),
+            newPersonSkill: document.getElementById('newPersonSkill'),
+            newPersonPosition: document.getElementById('newPersonPosition'),
             addPersonBtn: document.getElementById('addPersonBtn'),
+            bulkListType: document.getElementById('bulkListType'),
+            bulkPeopleInput: document.getElementById('bulkPeopleInput'),
+            addPeopleBulkBtn: document.getElementById('addPeopleBulkBtn'),
+            clearPeopleBtn: document.getElementById('clearPeople'),
             peopleListContainer: document.getElementById('peopleListContainer'),
             peopleCount: document.getElementById('peopleCount')
         };
 
         // Event listeners
         this.elements.addPlayerBtn.addEventListener('click', () => this.addPlayer());
+        this.elements.addAllAndDrawBtn.addEventListener('click', () => this.addAllAndDraw());
         this.elements.drawTeamsBtn.addEventListener('click', () => this.drawTeams());
         this.elements.clearAllBtn.addEventListener('click', () => this.clearAll());
         this.elements.arrivalBtn.addEventListener('click', () => this.registerArrival());
         this.elements.clearArrivalsBtn.addEventListener('click', () => this.clearArrivals());
         this.elements.addPersonBtn.addEventListener('click', () => this.addPerson());
+        this.elements.addPeopleBulkBtn.addEventListener('click', () => this.addPeopleFromBulk());
+        this.elements.clearPeopleBtn.addEventListener('click', () => this.clearPeople());
+        this.elements.ignoreArrivalOrder.addEventListener('change', () => this.updateArrivedPlayersSelect());
+        this.elements.bulkListType.addEventListener('change', () => this.updateBulkInputHint());
 
         // Enter key para adicionar pessoa
         this.elements.newPersonName.addEventListener('keypress', (e) => {
@@ -91,20 +165,35 @@ class TeamDrawApp {
         // Atualizar botão de sorteio quando configurações mudarem
         this.elements.numTeams.addEventListener('change', () => this.updateDrawButton());
         this.elements.playersPerTeam.addEventListener('change', () => this.updateDrawButton());
+
+        this.updateBulkInputHint();
+    }
+
+    updateBulkInputHint() {
+        const type = this.elements.bulkListType.value;
+        const placeholderByType = {
+            'name-only': 'William\nJohn\nIago',
+            'name-skill-position': 'William-2-zag\nJohn-3-atc\nIago-1-mei',
+            'name-position': 'William-zag\nJohn-atc\nIago-mei'
+        };
+
+        this.elements.bulkPeopleInput.placeholder = placeholderByType[type] || placeholderByType['name-skill-position'];
     }
 
     populatePlayerSelect() {
         const select = this.elements.playerSelect;
         select.innerHTML = '<option value="">-- Escolha uma pessoa --</option>';
         
-        const arrivedPeople = new Set(this.arrivals.map(a => a.name));
+        const arrivedPeople = new Set(this.arrivals.map(a => a.name.toLowerCase()));
         
-        const availableOptions = this.availablePeople.filter(person => !arrivedPeople.has(person));
-        availableOptions.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const availableOptions = this.availablePeople
+            .filter(person => !arrivedPeople.has(person.name.toLowerCase()))
+            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
         availableOptions.forEach(person => {
             const option = document.createElement('option');
-            option.value = person;
-            option.textContent = person;
+            option.value = person.name;
+            option.textContent = person.name;
             select.appendChild(option);
         });
     }
@@ -188,6 +277,9 @@ class TeamDrawApp {
 
     addPerson() {
         const name = this.elements.newPersonName.value.trim();
+        const parsedSkill = parseInt(this.elements.newPersonSkill.value, 10);
+        const skill = Number.isNaN(parsedSkill) ? null : parsedSkill;
+        const position = this.normalizePosition(this.elements.newPersonPosition.value);
 
         if (!name) {
             alert('Por favor, digite o nome da pessoa!');
@@ -195,24 +287,154 @@ class TeamDrawApp {
         }
 
         // Verificar se a pessoa já existe
-        if (this.availablePeople.some(person => person.toLowerCase() === name.toLowerCase())) {
+        if (this.availablePeople.some(person => person.name.toLowerCase() === name.toLowerCase())) {
             alert('Esta pessoa já foi cadastrada!');
             return;
         }
 
-        this.availablePeople.push(name);
+        this.availablePeople.push({ name, skill, position });
         this.elements.newPersonName.value = '';
+        this.elements.newPersonSkill.value = '';
+        this.elements.newPersonPosition.value = '';
         this.saveDataToLocalStorage();
         this.populatePlayerSelect();
         this.updatePeopleList();
         this.elements.newPersonName.focus();
     }
 
-    removePerson(personName) {
-        this.availablePeople = this.availablePeople.filter(person => person !== personName);
+    parseBulkPersonEntry(rawLine, listType) {
+        if (!rawLine) return null;
+
+        const cleaned = rawLine
+            .replace(/^\uFEFF/, '')
+            .replace(/^[\u200B\u200C\u200D\u2060]+/, '')
+            .replace(/^\s*\d+\s*[.)\-:]?\s*/, '')
+            .replace(/^\s*[-*•]+\s*/, '')
+            .replace(/\s*\([^)]*\)\s*$/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!cleaned) return null;
+
+        const tokens = cleaned.split(/\s*-\s*/).map(token => token.trim()).filter(Boolean);
+
+        if (listType === 'name-only') {
+            return {
+                name: cleaned,
+                skill: null,
+                position: null
+            };
+        }
+
+        if (listType === 'name-skill-position' && tokens.length >= 3) {
+            const rawLevel = tokens[tokens.length - 2];
+            const rawPosition = tokens[tokens.length - 1];
+            const name = tokens.slice(0, -2).join(' - ').trim();
+            const parsedLevel = parseInt(rawLevel, 10);
+
+            return {
+                name,
+                skill: [1, 2, 3].includes(parsedLevel) ? parsedLevel : null,
+                position: this.normalizePosition(rawPosition)
+            };
+        }
+
+        if (listType === 'name-position' && tokens.length >= 2) {
+            const rawPosition = tokens[tokens.length - 1];
+            const name = tokens.slice(0, -1).join(' - ').trim();
+
+            return {
+                name,
+                skill: null,
+                position: this.normalizePosition(rawPosition)
+            };
+        }
+
+        return {
+            name: cleaned,
+            skill: null,
+            position: null
+        };
+    }
+
+    addPeopleFromBulk() {
+        const rawInput = this.elements.bulkPeopleInput.value;
+        const listType = this.elements.bulkListType.value;
+
+        if (!rawInput || !rawInput.trim()) {
+            alert('Cole uma lista com os nomes para adicionar!');
+            return;
+        }
+
+        const entries = rawInput
+            .split(/\r?\n/)
+            .map(line => this.parseBulkPersonEntry(line, listType))
+            .filter(entry => entry && entry.name);
+
+        if (entries.length === 0) {
+            alert('Nao foi encontrado nenhum nome valido na lista.');
+            return;
+        }
+
+        const defaultSkillParsed = parseInt(this.elements.newPersonSkill.value, 10);
+        const defaultSkill = Number.isNaN(defaultSkillParsed) ? null : defaultSkillParsed;
+        const defaultPosition = this.normalizePosition(this.elements.newPersonPosition.value);
+        const existingNames = new Set(this.availablePeople.map(person => person.name.toLowerCase()));
+        const seenInBatch = new Set();
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        entries.forEach(entry => {
+            const key = entry.name.toLowerCase();
+
+            if (existingNames.has(key) || seenInBatch.has(key)) {
+                duplicateCount++;
+                return;
+            }
+
+            this.availablePeople.push({
+                name: entry.name,
+                skill: entry.skill ?? defaultSkill,
+                position: entry.position ?? defaultPosition
+            });
+            seenInBatch.add(key);
+            existingNames.add(key);
+            addedCount++;
+        });
+
+        if (addedCount === 0) {
+            alert('Nenhum novo participante foi adicionado (todos ja existiam).');
+            return;
+        }
+
+        this.elements.bulkPeopleInput.value = '';
         this.saveDataToLocalStorage();
         this.populatePlayerSelect();
         this.updatePeopleList();
+
+        const duplicateMsg = duplicateCount > 0
+            ? `\n${duplicateCount} nome(s) ignorado(s) por duplicidade.`
+            : '';
+        alert(`${addedCount} participante(s) adicionado(s) com sucesso!${duplicateMsg}`);
+    }
+
+    removePerson(personName) {
+        const normalized = personName.toLowerCase();
+        this.availablePeople = this.availablePeople.filter(person => person.name.toLowerCase() !== normalized);
+        this.saveDataToLocalStorage();
+        this.populatePlayerSelect();
+        this.updatePeopleList();
+    }
+
+    clearPeople() {
+        if (this.availablePeople.length === 0) return;
+
+        if (confirm('Tem certeza que deseja limpar todos os participantes cadastrados?')) {
+            this.availablePeople = [];
+            this.saveDataToLocalStorage();
+            this.populatePlayerSelect();
+            this.updatePeopleList();
+        }
     }
 
     updatePeopleList() {
@@ -223,9 +445,17 @@ class TeamDrawApp {
         this.availablePeople.forEach(person => {
             const chip = document.createElement('div');
             chip.className = 'person-chip';
+            const skillLabel = this.getSkillValue(person.skill) > 0 ? `${'⭐'.repeat(this.getSkillValue(person.skill))}` : 'Sem nível';
+            const positionNames = {
+                zag: 'zag',
+                mei: 'mei',
+                atc: 'atc'
+            };
+            const positionLabel = positionNames[person.position] || 'Sem habilidade';
             chip.innerHTML = `
-                <span>${person}</span>
-                <button class="remove-person" onclick="app.removePerson('${person.replace(/'/g, "\\'")}')">×</button>
+                <span>${person.name}</span>
+                <small>(${skillLabel} | ${positionLabel})</small>
+                <button class="remove-person" onclick="app.removePerson('${person.name.replace(/'/g, "\\'")}')">×</button>
             `;
             container.appendChild(chip);
         });
@@ -234,29 +464,42 @@ class TeamDrawApp {
     updateArrivedPlayersSelect() {
         const select = this.elements.playerName;
         if (!select) return;
+        const ignoreArrivalOrder = this.elements.ignoreArrivalOrder?.checked;
+        const defaultText = ignoreArrivalOrder
+            ? '-- Selecione um participante cadastrado --'
+            : '-- Selecione quem chegou --';
 
-        select.innerHTML = '<option value="">-- Selecione quem chegou --</option>';
+        select.innerHTML = `<option value="">${defaultText}</option>`;
 
         const alreadyAdded = new Set(this.players.map(player => player.name.toLowerCase()));
-        const arrivalOrder = [...this.arrivals].sort((a, b) => a.timestamp - b.timestamp);
+        const availableNames = ignoreArrivalOrder
+            ? [...this.availablePeople].map(person => person.name).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+            : [...this.arrivals]
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .map(arrival => arrival.name);
 
-        arrivalOrder.forEach(arrival => {
-            if (alreadyAdded.has(arrival.name.toLowerCase())) return;
+        availableNames.forEach(name => {
+            if (alreadyAdded.has(name.toLowerCase())) return;
 
             const option = document.createElement('option');
-            option.value = arrival.name;
-            option.textContent = arrival.name;
+            option.value = name;
+            option.textContent = name;
             select.appendChild(option);
         });
     }
 
     addPlayer() {
         const name = this.elements.playerName.value.trim();
-        const skill = parseInt(this.elements.playerSkill.value);
-        const position = this.elements.playerPosition.value;
+        const parsedSkill = parseInt(this.elements.playerSkill.value, 10);
+        const participant = this.findPersonByName(name);
+        const skill = Number.isNaN(parsedSkill) ? (participant?.skill ?? null) : parsedSkill;
+        const position = this.normalizePosition(this.elements.playerPosition.value) || (participant?.position ?? null);
 
         if (!name) {
-            alert('Selecione uma pessoa que chegou!');
+            const msg = this.elements.ignoreArrivalOrder?.checked
+                ? 'Selecione um participante cadastrado!'
+                : 'Selecione uma pessoa que chegou!';
+            alert(msg);
             return;
         }
 
@@ -275,8 +518,58 @@ class TeamDrawApp {
 
         this.players.push(player);
         this.elements.playerName.value = '';
+        this.elements.playerSkill.value = '';
+        this.elements.playerPosition.value = '';
         this.saveDataToLocalStorage();  // Salvar os dados no localStorage
         this.updateUI();
+    }
+
+    addAllAndDraw() {
+        const alreadyAdded = new Set(this.players.map(player => player.name.toLowerCase()));
+        const ignoreArrivalOrder = this.elements.ignoreArrivalOrder?.checked;
+        const pendingPeople = ignoreArrivalOrder
+            ? [...this.availablePeople]
+                .map(person => person.name)
+                .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                .filter(name => !alreadyAdded.has(name.toLowerCase()))
+            : [...this.arrivals]
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .map(arrival => arrival.name)
+                .filter(name => !alreadyAdded.has(name.toLowerCase()));
+
+        if (pendingPeople.length === 0) {
+            const msg = ignoreArrivalOrder
+                ? 'Nao ha participantes cadastrados pendentes para adicionar.'
+                : 'Nao ha jogadores pendentes para adicionar.';
+            alert(msg);
+            return;
+        }
+
+        const nowBase = Date.now();
+        pendingPeople.forEach((name, index) => {
+            const participant = this.findPersonByName(name);
+            this.players.push({
+                id: nowBase + index,
+                name,
+                skill: participant?.skill ?? null,
+                position: participant?.position ?? null
+            });
+        });
+
+        this.saveDataToLocalStorage();
+        this.updateUI();
+
+        const numTeams = parseInt(this.elements.numTeams.value, 10);
+        const playersPerTeam = parseInt(this.elements.playersPerTeam.value, 10);
+        const requiredPlayers = numTeams * playersPerTeam;
+
+        if (this.players.length >= requiredPlayers) {
+            this.drawTeams();
+            alert(`${pendingPeople.length} jogador(es) adicionado(s) e sorteio realizado!`);
+            return;
+        }
+
+        alert(`${pendingPeople.length} jogador(es) adicionado(s). Faltam ${requiredPlayers - this.players.length} para sortear.`);
     }
 
     removePlayer(playerId) {
@@ -302,21 +595,21 @@ class TeamDrawApp {
             const playerCard = document.createElement('div');
             playerCard.className = 'player-card';
             
-            const stars = '⭐'.repeat(player.skill);
+            const skillValue = this.getSkillValue(player.skill);
+            const stars = skillValue > 0 ? '⭐'.repeat(skillValue) : 'Sem habilidade';
             const positionNames = {
-                'pivo': 'Pivô',
-                'fixo': 'Fixo',
-                'meio': 'Meio',
-                'ala-esquerda': 'ala-esquerda',
-                'ala-direita': 'ala-direita'
+                zag: 'zag',
+                mei: 'mei',
+                atc: 'atc'
             };
+            const positionLabel = positionNames[player.position] || 'Sem posição';
 
             playerCard.innerHTML = `
                 <button class="remove-player" onclick="app.removePlayer(${player.id})">×</button>
                 <div class="player-name">${player.name}</div>
                 <div class="player-details">
                     <span class="player-skill">${stars}</span>
-                    <span class="player-position">${positionNames[player.position]}</span>
+                    <span class="player-position">${positionLabel}</span>
                 </div>
             `;
 
@@ -357,7 +650,13 @@ class TeamDrawApp {
             name: `Time ${i + 1}`,
             players: [],
             totalSkill: 0,
-            positions: { pivo: 0, fixo: 0, meio: 0, ala_esquerda: 0 ,ala_direita: 0 }
+            positions: {
+                zag: 0,
+                mei: 0,
+                atc: 0,
+                'sem-posicao': 0,
+                sem_posicao: 0
+            }
         }));
 
         // Algoritmo de balanceamento
@@ -369,22 +668,23 @@ class TeamDrawApp {
     }
 
     balanceTeams(availablePlayers, playersPerTeam) {
+        const knownPositions = ['zag', 'mei', 'atc'];
+
         // Separar jogadores por posição
         const playersByPosition = {
-            pivo: availablePlayers.filter(p => p.position === 'pivo'),
-            fixo: availablePlayers.filter(p => p.position === 'fixo'),
-            meio: availablePlayers.filter(p => p.position === 'meio'),
-            'ala-esquerda': availablePlayers.filter(p => p.position === 'ala-esquerda'),
-            'ala-direita': availablePlayers.filter(p => p.position === 'ala-direita')
+            zag: availablePlayers.filter(p => p.position === 'zag'),
+            mei: availablePlayers.filter(p => p.position === 'mei'),
+            atc: availablePlayers.filter(p => p.position === 'atc'),
+            'sem-posicao': availablePlayers.filter(p => !p.position || !knownPositions.includes(p.position))
         };
 
         // Ordenar cada posição por habilidade (decrescente)
         Object.keys(playersByPosition).forEach(position => {
-            playersByPosition[position].sort((a, b) => b.skill - a.skill);
+            playersByPosition[position].sort((a, b) => this.getSkillValue(b.skill) - this.getSkillValue(a.skill));
         });
 
         // Distribuir jogadores por posição de forma balanceada
-        const positions = ['pivo', 'fixo', 'meio', 'ala-esquerda', 'ala-direita'];
+        const positions = ['zag', 'mei', 'atc', 'sem-posicao'];
         
         for (let round = 0; round < playersPerTeam; round++) {
             for (const position of positions) {
@@ -407,15 +707,15 @@ class TeamDrawApp {
                     const player = playersByPosition[position].shift();
                     
                     team.players.push(player);
-                    team.totalSkill += player.skill;
-                    team.positions[player.position]++;
+                    team.totalSkill += this.getSkillValue(player.skill);
+                    this.adjustTeamPositionCount(team, player.position || 'sem-posicao', 1);
                 }
             }
         }
 
         // Se ainda restam jogadores, distribuir pelos times com menos jogadores
         const remainingPlayers = Object.values(playersByPosition).flat();
-        remainingPlayers.sort((a, b) => b.skill - a.skill);
+        remainingPlayers.sort((a, b) => this.getSkillValue(b.skill) - this.getSkillValue(a.skill));
 
         for (const player of remainingPlayers) {
             const teamWithFewestPlayers = this.teams
@@ -428,8 +728,8 @@ class TeamDrawApp {
 
             if (teamWithFewestPlayers) {
                 teamWithFewestPlayers.players.push(player);
-                teamWithFewestPlayers.totalSkill += player.skill;
-                teamWithFewestPlayers.positions[player.position]++;
+                teamWithFewestPlayers.totalSkill += this.getSkillValue(player.skill);
+                this.adjustTeamPositionCount(teamWithFewestPlayers, player.position || 'sem-posicao', 1);
             }
         }
 
@@ -467,7 +767,7 @@ class TeamDrawApp {
             .filter(team => team.id !== sharedTeam.id)
             .forEach(team => {
                 team.players.forEach(player => {
-                    const diff = Math.abs(player.skill - playerToMove.skill);
+                    const diff = Math.abs(this.getSkillValue(player.skill) - this.getSkillValue(playerToMove.skill));
                     const samePosition = player.position === playerToMove.position;
 
                     candidateSwaps.push({
@@ -505,18 +805,24 @@ class TeamDrawApp {
         sharedTeam.players[sharedIndex] = targetPlayer;
         targetTeam.players[targetIndex] = playerToMove;
 
-        sharedTeam.totalSkill = sharedTeam.totalSkill - playerToMove.skill + targetPlayer.skill;
-        targetTeam.totalSkill = targetTeam.totalSkill - targetPlayer.skill + playerToMove.skill;
+        sharedTeam.totalSkill = sharedTeam.totalSkill - this.getSkillValue(playerToMove.skill) + this.getSkillValue(targetPlayer.skill);
+        targetTeam.totalSkill = targetTeam.totalSkill - this.getSkillValue(targetPlayer.skill) + this.getSkillValue(playerToMove.skill);
 
         if (!bestSwap.samePosition) {
-            this.adjustTeamPositionCount(sharedTeam, playerToMove.position, -1);
-            this.adjustTeamPositionCount(sharedTeam, targetPlayer.position, 1);
-            this.adjustTeamPositionCount(targetTeam, targetPlayer.position, -1);
-            this.adjustTeamPositionCount(targetTeam, playerToMove.position, 1);
+            this.adjustTeamPositionCount(sharedTeam, playerToMove.position || 'sem-posicao', -1);
+            this.adjustTeamPositionCount(sharedTeam, targetPlayer.position || 'sem-posicao', 1);
+            this.adjustTeamPositionCount(targetTeam, targetPlayer.position || 'sem-posicao', -1);
+            this.adjustTeamPositionCount(targetTeam, playerToMove.position || 'sem-posicao', 1);
         }
     }
 
+    getSkillValue(skill) {
+        if (typeof skill !== 'number' || Number.isNaN(skill)) return 0;
+        return skill;
+    }
+
     adjustTeamPositionCount(team, position, delta) {
+        if (!position) return;
         const underscored = position.replace('-', '_');
 
         team.positions[position] = (team.positions[position] || 0) + delta;
@@ -552,11 +858,9 @@ class TeamDrawApp {
                 (team.totalSkill / team.players.length).toFixed(1) : 0;
 
             const positionNames = {
-                'pivo': 'Pivô',
-                'fixo': 'Fixo',
-                'meio': 'Meio',
-                'ala-esquerda': 'Ala Esquerda',
-                'ala-direita': 'Ala Direita'
+                zag: 'zag',
+                mei: 'mei',
+                atc: 'atc'
             };
 
             teamCard.innerHTML = `
@@ -571,8 +875,8 @@ class TeamDrawApp {
                         <li class="team-player">
                             <div class="team-player-name">${player.name}</div>
                             <div class="team-player-info">
-                                <span>${'⭐'.repeat(player.skill)}</span>
-                                <span>${positionNames[player.position]}</span>
+                                <span>${this.getSkillValue(player.skill) > 0 ? '⭐'.repeat(this.getSkillValue(player.skill)) : 'Sem habilidade'}</span>
+                                <span>${positionNames[player.position] || 'Sem posição'}</span>
                             </div>
                         </li>
                     `).join('')}
@@ -595,7 +899,7 @@ class TeamDrawApp {
         
         // Calcular distribuição de posições
         const positionDistribution = {};
-        const positions = ['pivo', 'fixo', 'meio', 'ala_esquerda', 'ala_direita'];
+        const positions = ['zag', 'mei', 'atc', 'sem_posicao'];
         
         positions.forEach(position => {
             const counts = this.teams.map(team => team.positions[position]);
